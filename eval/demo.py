@@ -24,20 +24,22 @@ BLUE = '\033[94m'
 YELLOW = '\033[93m'
 MAGENTA = '\033[95m'
 CYAN = '\033[96m'
-GREY = '\033[2;37m'
 WHITE = '\033[97m'
 RESET = '\033[0m'
 BOLD = '\033[1m'
 CLEAR = '\033[2J\033[H' 
 
+
 def clear_screen():
     """Clear the terminal screen"""
     print(CLEAR, end='')
+
 
 def print_colored(text, color=RESET, bold=False):
     """Print colored text"""
     style = BOLD if bold else ''
     print(f"{style}{color}{text}{RESET}")
+
 
 def main():
     """
@@ -119,7 +121,7 @@ def main():
     prompt_text = tokenizer.decode(inputs[0], skip_special_tokens=False)
     # Track previous token ids to detect newly added/edited tokens per step
     prompt_len = inputs.shape[1]
-    render_state = {"prev_ids": None}
+    render_state = {"prev_ids": None, "ever_had_masks": False}
     
     def generation_tokens_hook_func(step, x, logits):
         """Hook function to display generation progress with colors"""
@@ -168,9 +170,17 @@ def main():
                     if prev_tok != curr_tok:
                         changed_positions.add(idx)
 
+            # If we have EVER seen masks and now none remain, disable white highlighting
+            mask_id = tokenizer.mask_token_id
+            has_masks = (mask_id is not None) and (mask_id in curr_ids)
+            if has_masks:
+                render_state["ever_had_masks"] = True
+            if (render_state["ever_had_masks"]) and (not has_masks):
+                changed_positions.clear()
+
             in_async = False
-            in_promise = False
             last_was_newline = False
+            seen_any_async = False
             for ti in range(prompt_len, len(curr_ids)):
                 piece = tokenizer.decode([curr_ids[ti]], skip_special_tokens=False)
 
@@ -179,12 +189,17 @@ def main():
                     if not last_was_newline:
                         print()
                         last_was_newline = True
+                    # Extra blank line before the first async block (after topics)
+                    if not seen_any_async:
+                        print()
+                        last_was_newline = True
                     if ti in changed_positions:
                         print(WHITE + '<async>' + RESET, end="", flush=True)
                     else:
                         print(BLUE + '<async>' + BLUE, end="", flush=True)
                     last_was_newline = False
                     in_async = True
+                    seen_any_async = True
                     continue
                 if piece == '</async>':
                     if ti in changed_positions:
@@ -192,18 +207,17 @@ def main():
                     else:
                         print(BLUE + '</async>' + RESET, end="", flush=True)
                     print()
+                    print()
                     last_was_newline = True
                     in_async = False
                     continue
                 if piece == '<promise>-<topic>':
-                    in_promise = True
                     if ti in changed_positions:
                         print(WHITE + '<promise>-<topic>' + RESET, end="", flush=True)
                     else:
                         print(GREEN + '<promise>-<topic>' + RESET, end="", flush=True)
                     continue
                 if piece == '</topic>':
-                    in_promise = False
                     if ti in changed_positions:
                         print(WHITE + '</topic>' + RESET, end="", flush=True)
                     else:
@@ -245,7 +259,7 @@ def main():
     end_time = time.time()
     
     print()
-    time.sleep(0.5)
+    time.sleep(1.5)
     
     generated_text = tokenizer.decode(output.sequences[0], skip_special_tokens=False)
     
@@ -261,19 +275,12 @@ def main():
     
     clean_generated_text = clean_text(generated_text)
     
-    print_colored("UNCLEAN GENERATION:", YELLOW, bold=True)
-    print(GREY + generated_text + RESET)
-    print()
-    print_colored("-" * 80, CYAN)
-    print()
-    time.sleep(1.0)
-    
     print_colored("CLEAN GENERATION:", YELLOW, bold=True)
     print(WHITE + clean_generated_text + RESET)
     print()
     print_colored("-" * 80, CYAN)
     print()
-    time.sleep(1.0)
+    time.sleep(3.0)
     
     tokens_generated = output.sequences.shape[1] - inputs.shape[1]
     generation_time = end_time - start_time
