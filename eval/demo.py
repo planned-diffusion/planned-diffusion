@@ -170,17 +170,20 @@ def main():
 
             in_async = False
             in_promise = False
+            last_was_newline = False
             for ti in range(prompt_len, len(curr_ids)):
                 piece = tokenizer.decode([curr_ids[ti]], skip_special_tokens=False)
 
-                # Structural tags; async blocks open/close on newlines
+                # Handle structural tags; async blocks open/close on newlines
                 if piece == '<async>':
-                    print()
+                    if not last_was_newline:
+                        print()
+                        last_was_newline = True
                     if ti in changed_positions:
                         print(WHITE + '<async>' + RESET, end="", flush=True)
                     else:
                         print(BLUE + '<async>' + BLUE, end="", flush=True)
-                    print()
+                    last_was_newline = False
                     in_async = True
                     continue
                 if piece == '</async>':
@@ -189,6 +192,7 @@ def main():
                     else:
                         print(BLUE + '</async>' + RESET, end="", flush=True)
                     print()
+                    last_was_newline = True
                     in_async = False
                     continue
                 if piece == '<promise>-<topic>':
@@ -208,15 +212,17 @@ def main():
                 if tokenizer.mask_token and piece == tokenizer.mask_token:
                     color = WHITE if ti in changed_positions else (BLUE if in_async else GREEN)
                     print(color + '[M]' + RESET, end="", flush=True)
+                    last_was_newline = False
                     continue
 
                 base_color = BLUE if in_async else GREEN
                 color = WHITE if ti in changed_positions else base_color
                 print(color + piece + RESET, end="", flush=True)
+                last_was_newline = False
 
             render_state["prev_ids"] = curr_ids[:]
         
-        print()
+        # keep inline layout; no trailing blank line after each step
         
         if args.slow:
             time.sleep(0.3)
