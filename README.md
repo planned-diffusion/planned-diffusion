@@ -1,8 +1,8 @@
 ## Planned Diffusion
 
 This is the official repository for Planned Diffusion.
-> 
-> arXiv: [Planned Diffusion](https://arxiv.org/abs/2510.18087)
+
+> [Planned Diffusion](https://arxiv.org/abs/2510.18087)
 > 
 > Authors: Daniel Israel, Tian Jin, Ellie Cheng, Guy Van den Broeck, Aditya Grover, Suvinay Subramanian, Michael Carbin
 > 
@@ -83,7 +83,7 @@ python -m eval.pd_generate \
   --model_path dmisrael/planned-diffusion-dream7b-sft-16ep \
   --prompt "What is Aurora Borealis? Please be concise."
 
-# With options
+# With options example
 python -m eval.pd_generate \
   --model_path dmisrael/planned-diffusion-dream7b-sft-16ep \
   --prompt "Explain diffusion vs autoregressive generation." \
@@ -135,8 +135,6 @@ torchrun --nproc_per_node=4 eval/alpaca_eval_diffusion.py \
   - `--disable_block_sparsity`: use dense attention within generated blocks
 
 ### Citation
-
-ArXiv: Planned Diffusion: https://arxiv.org/abs/2510.18087
 
 ```bibtex
 @misc{israel2025planneddiffusion,
